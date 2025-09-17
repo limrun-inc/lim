@@ -2,11 +2,12 @@ package get
 
 import (
 	"fmt"
-	"github.com/limrun-inc/go-sdk/packages/param"
 
-	"github.com/limrun-inc/go-sdk"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+
+	"github.com/limrun-inc/go-sdk"
+	"github.com/limrun-inc/go-sdk/packages/param"
 )
 
 var (
@@ -69,8 +70,12 @@ $ lim get asset <ID>
 				instance.ID,
 				instance.Name,
 				instance.Md5,
-				instance.SignedDownloadURL,
-				instance.SignedUploadURL,
+			}
+			if includeDownloadUrl {
+				data[i] = append(data[i], instance.SignedDownloadURL)
+			}
+			if includeUploadUrl {
+				data[i] = append(data[i], instance.SignedUploadURL)
 			}
 		}
 		cols := []string{"ID", "Name", "MD5"}
