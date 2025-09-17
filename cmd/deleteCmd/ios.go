@@ -2,6 +2,8 @@ package deleteCmd
 
 import (
 	"fmt"
+	"github.com/limrun-inc/lim/config"
+	"github.com/limrun-inc/lim/errors"
 
 	"github.com/limrun-inc/go-sdk"
 	"github.com/spf13/cobra"
@@ -21,6 +23,13 @@ $ lim delete ios <ID>
 		id := args[0]
 		lim := cmd.Context().Value("lim").(limrun.Client)
 		if err := lim.IosInstances.Delete(cmd.Context(), id); err != nil {
+			if errors.IsUnauthenticated(err) {
+				if err := config.Login(cmd.Context()); err != nil {
+					return err
+				}
+				fmt.Println("You are logged in now")
+				return nil
+			}
 			return fmt.Errorf("failed to delete iOS instance: %w", err)
 		}
 		fmt.Println("Deleted iOS instance:", id)

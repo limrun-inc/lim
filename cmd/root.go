@@ -9,6 +9,7 @@ import (
 	"fmt"
 	limrun "github.com/limrun-inc/go-sdk"
 	"github.com/limrun-inc/go-sdk/option"
+	"github.com/limrun-inc/lim/config"
 	"github.com/spf13/viper"
 	"os"
 	"strings"
@@ -16,16 +17,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	ConfigKeyAPIKey          = "api-key"
-	ConfigKeyAPIEndpoint     = "api-endpoint"
-	ConfigKeyConsoleEndpoint = "console-endpoint"
-)
-
 var apiKeyFlagValue string
 
 func init() {
-	RootCmd.PersistentFlags().StringVar(&apiKeyFlagValue, ConfigKeyAPIKey, "", "API Key to use to access Limrun")
+	RootCmd.PersistentFlags().StringVar(&apiKeyFlagValue, config.ConfigKeyAPIKey, "", "API Key to use to access Limrun")
 }
 
 var (
@@ -47,7 +42,7 @@ to quickly create a Cobra application.`,
 		if err := initializeConfig(cmd); err != nil {
 			return err
 		}
-		apiKey := viper.GetString(ConfigKeyAPIKey)
+		apiKey := viper.GetString(config.ConfigKeyAPIKey)
 		opts := []option.RequestOption{
 			option.WithAPIKey(apiKey),
 		}
@@ -72,8 +67,8 @@ func initializeConfig(cmd *cobra.Command) error {
 			return err
 		}
 	}
-	viper.SetDefault(ConfigKeyAPIEndpoint, "https://api.limrun.com")
-	viper.SetDefault(ConfigKeyConsoleEndpoint, "https://console.limrun.com")
+	viper.SetDefault(config.ConfigKeyAPIEndpoint, "https://api.limrun.com")
+	viper.SetDefault(config.ConfigKeyConsoleEndpoint, "https://console.limrun.com")
 	if err := viper.SafeWriteConfig(); err != nil && !errors.As(err, &configFileAlreadyExistsError) {
 		return fmt.Errorf("failed to initialize config file: %v", err)
 	}

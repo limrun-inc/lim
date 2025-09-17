@@ -5,6 +5,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/limrun-inc/lim/config"
+	"github.com/limrun-inc/lim/errors"
 	"io"
 	"net/http"
 	"os"
@@ -41,6 +43,13 @@ var DownloadAssetCmd = &cobra.Command{
 				IncludeDownloadURL: param.NewOpt(true),
 			})
 			if err != nil {
+				if errors.IsUnauthenticated(err) {
+					if err := config.Login(cmd.Context()); err != nil {
+						return err
+					}
+					fmt.Println("You are logged in now")
+					return nil
+				}
 				return fmt.Errorf("failed to get asset: %w", err)
 			}
 			ass = *fetched

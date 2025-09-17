@@ -5,6 +5,8 @@ package connect
 
 import (
 	"fmt"
+	"github.com/limrun-inc/lim/config"
+	"github.com/limrun-inc/lim/errors"
 	"os"
 	"os/signal"
 	"syscall"
@@ -32,6 +34,13 @@ var AndroidCmd = &cobra.Command{
 		lim := cmd.Context().Value("lim").(limrun.Client)
 		i, err := lim.AndroidInstances.Get(cmd.Context(), id)
 		if err != nil {
+			if errors.IsUnauthenticated(err) {
+				if err := config.Login(cmd.Context()); err != nil {
+					return err
+				}
+				fmt.Println("You are logged in now")
+				return nil
+			}
 			return fmt.Errorf("failed to get Android instance %s: %w", id, err)
 		}
 		t, err := tunnel.New(i.Status.AdbWebSocketURL, i.Status.Token, tunnel.WithADBPath(adbPath))

@@ -6,6 +6,8 @@ package run
 import (
 	"fmt"
 	"github.com/limrun-inc/go-sdk/packages/param"
+	"github.com/limrun-inc/lim/config"
+	"github.com/limrun-inc/lim/errors"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -38,6 +40,13 @@ var AndroidCmd = &cobra.Command{
 			Wait: param.NewOpt(true),
 		})
 		if err != nil {
+			if errors.IsUnauthenticated(err) {
+				if err := config.Login(cmd.Context()); err != nil {
+					return err
+				}
+				fmt.Println("You are logged in now")
+				return nil
+			}
 			return fmt.Errorf("failed to create a new Android instance: %w", err)
 		}
 		if connect {

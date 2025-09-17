@@ -3,6 +3,8 @@ package get
 import (
 	"fmt"
 	"github.com/limrun-inc/go-sdk"
+	"github.com/limrun-inc/lim/config"
+	"github.com/limrun-inc/lim/errors"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
@@ -35,6 +37,13 @@ $ lim get ios <ID>
 				State: limrun.IosInstanceListParamsStateReady,
 			})
 			if err != nil {
+				if errors.IsUnauthenticated(err) {
+					if err := config.Login(cmd.Context()); err != nil {
+						return err
+					}
+					fmt.Println("You are logged in now")
+					return nil
+				}
 				return fmt.Errorf("failed to list ios instances: %w", err)
 			}
 			instances = *fetched

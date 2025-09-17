@@ -5,6 +5,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/limrun-inc/lim/config"
+	"github.com/limrun-inc/lim/errors"
 
 	"github.com/spf13/cobra"
 
@@ -37,6 +39,13 @@ var UploadAssetCmd = &cobra.Command{
 		}
 		ass, err := lim.Assets.GetOrUpload(cmd.Context(), params)
 		if err != nil {
+			if errors.IsUnauthenticated(err) {
+				if err := config.Login(cmd.Context()); err != nil {
+					return err
+				}
+				fmt.Println("You are logged in now")
+				return nil
+			}
 			return err
 		}
 		fmt.Printf("Asset %s with ID of %s is ready", ass.Name, ass.ID)

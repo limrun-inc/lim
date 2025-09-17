@@ -2,6 +2,8 @@ package get
 
 import (
 	"fmt"
+	"github.com/limrun-inc/lim/config"
+	"github.com/limrun-inc/lim/errors"
 
 	"github.com/limrun-inc/go-sdk"
 	"github.com/olekukonko/tablewriter"
@@ -36,6 +38,13 @@ $ lim get android <ID>
 				State: limrun.AndroidInstanceListParamsStateReady,
 			})
 			if err != nil {
+				if errors.IsUnauthenticated(err) {
+					if err := config.Login(cmd.Context()); err != nil {
+						return err
+					}
+					fmt.Println("You are logged in now")
+					return nil
+				}
 				return fmt.Errorf("failed to list android instances: %w", err)
 			}
 			instances = *fetched

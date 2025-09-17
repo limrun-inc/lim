@@ -2,6 +2,8 @@ package get
 
 import (
 	"fmt"
+	"github.com/limrun-inc/lim/config"
+	"github.com/limrun-inc/lim/errors"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -54,6 +56,13 @@ $ lim get asset <ID>
 			}
 			fetched, err := lim.Assets.List(cmd.Context(), params)
 			if err != nil {
+				if errors.IsUnauthenticated(err) {
+					if err := config.Login(cmd.Context()); err != nil {
+						return err
+					}
+					fmt.Println("You are logged in now")
+					return nil
+				}
 				return fmt.Errorf("failed to list assets: %w", err)
 			}
 			instances = *fetched
