@@ -10,7 +10,7 @@ import (
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
-	Use:   "get [KIND] [ID]",
+	Use:   "get [android|ios|asset] [ID]",
 	Args:  cobra.MinimumNArgs(1),
 	Short: "Get all instances for the given kind, or specific instance if an ID is provided.",
 	Long: `Examples:

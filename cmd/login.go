@@ -7,12 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/limrun-inc/lim/version"
-	"github.com/spf13/viper"
 	"net/http"
 	"net/url"
 	"os/exec"
 	"runtime"
+
+	"github.com/limrun-inc/lim/version"
+	"github.com/spf13/viper"
 
 	"github.com/spf13/cobra"
 )
@@ -40,6 +41,15 @@ func login(ctx context.Context) error {
 	loggedIn := make(chan bool)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/authn/callback", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "*")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		apiKey := r.URL.Query().Get(ConfigKeyAPIKey)
 		if apiKey == "" {
 			http.Error(w, "missing apiKey", http.StatusBadRequest)
@@ -51,61 +61,7 @@ func login(ctx context.Context) error {
 			http.Error(w, fmt.Sprintf("failed to write config: %v", err), http.StatusInternalServerError)
 			loggedIn <- false
 		}
-		html := `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Limrun - Login Successful</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f5f5f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background: white;
-            padding: 2rem 3rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        h1 {
-            color: #2C3E50;
-            margin-bottom: 1rem;
-            font-size: 32px;
-        }
-        .success-icon {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 1.5rem;
-        }
-        p {
-            color: #7F8C8D;
-            margin-bottom: 1rem;
-            font-size: 18px;
-        }
-        .close-text {
-            font-size: 16px;
-            color: #95A5A6;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <svg class="success-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z" fill="#2ECC71"/>
-        </svg>
-        <h1>Logged In!</h1>
-        <p>You can close this window and return to your terminal</p>
-    </div>
-</body>
-</html>`
-		w.Header().Set("Content-Type", "text/html")
-		_, _ = fmt.Fprintf(w, html)
+		w.WriteHeader(http.StatusOK)
 		loggedIn <- true
 	})
 	srv := &http.Server{
