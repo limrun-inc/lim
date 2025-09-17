@@ -1,0 +1,72 @@
+/*
+Copyright © 2025 NAME HERE <EMAIL ADDRESS>
+*/
+package run
+
+import (
+	"fmt"
+	"github.com/limrun-inc/go-sdk/packages/param"
+	"os"
+	"os/exec"
+	"os/signal"
+	"syscall"
+
+	limrun "github.com/limrun-inc/go-sdk"
+	"github.com/limrun-inc/go-sdk/tunnel"
+	"github.com/spf13/cobra"
+)
+
+var (
+	adbPath string
+	connect bool
+	stream  bool
+)
+
+func init() {
+	AndroidCmd.PersistentFlags().StringVar(&adbPath, "adb-path", "adb", "Optional path to the adb binary, defaults to `adb`")
+	AndroidCmd.PersistentFlags().BoolVar(&connect, "connect", true, "Connect to the Android instance, e.g. start ADB tunnel. Default is true.")
+	AndroidCmd.PersistentFlags().BoolVar(&stream, "stream", true, "Stream the Android instance for control. Default is true. Connect flag must be true.")
+}
+
+// AndroidCmd represents the connect command for Android
+var AndroidCmd = &cobra.Command{
+	Use:   "android",
+	Short: "Creates a new Android instance, connects and starts streaming.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		lim := cmd.Context().Value("lim").(limrun.Client)
+		i, err := lim.AndroidInstances.New(cmd.Context(), limrun.AndroidInstanceNewParams{
+			Wait: param.NewOpt(true),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create a new Android instance: %w", err)
+		}
+		if connect {
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+			t, err := tunnel.New(i.Status.AdbWebSocketURL, i.Status.Token, tunnel.WithADBPath(adbPath))
+			if err != nil {
+				return fmt.Errorf("failed to create tunnel: %w", err)
+			}
+			if err := t.Start(); err != nil {
+				return fmt.Errorf("failed to start tunnel: %w", err)
+			}
+			defer t.Close()
+			if stream {
+				go func() {
+					if out, err := exec.CommandContext(cmd.Context(), "scrcpy", "-s", t.Addr()).CombinedOutput(); err != nil {
+						_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "failed to start scrcpy: %s %s", err.Error(), string(out))
+					}
+					sigChan <- syscall.SIGTERM
+				}()
+			}
+			fmt.Println("Tunnel started. Press Ctrl+C to stop.")
+			select {
+			case sig := <-sigChan:
+				fmt.Printf("Received signal %v, stopping tunnel...\n", sig)
+			}
+		} else {
+			cmd.Printf("Created instance %s\n", i.Metadata.ID)
+		}
+		return nil
+	},
+}
