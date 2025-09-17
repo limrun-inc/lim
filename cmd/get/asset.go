@@ -37,8 +37,8 @@ $ lim get asset <ID>
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var id string
-		if len(args) > 1 {
-			id = args[1]
+		if len(args) > 0 {
+			id = args[0]
 		}
 		var data [][]string
 		table := tablewriter.NewWriter(cmd.OutOrStdout())
