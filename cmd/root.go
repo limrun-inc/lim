@@ -25,7 +25,7 @@ const (
 var apiKeyFlagValue string
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&apiKeyFlagValue, ConfigKeyAPIKey, "", "API Key to use to access Limrun")
+	RootCmd.PersistentFlags().StringVar(&apiKeyFlagValue, ConfigKeyAPIKey, "", "API Key to use to access Limrun")
 }
 
 var (
@@ -33,8 +33,8 @@ var (
 	configFileAlreadyExistsError viper.ConfigFileAlreadyExistsError
 )
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
+// RootCmd represents the base command when called without any subcommands
+var RootCmd = &cobra.Command{
 	Use:   "lim",
 	Short: "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
@@ -83,7 +83,7 @@ func initializeConfig(cmd *cobra.Command) error {
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
@@ -98,5 +98,5 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
