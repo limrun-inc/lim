@@ -10,8 +10,8 @@ import (
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
-	Use:   "get [KIND]",
-	Args:  cobra.ExactArgs(1),
+	Use:   "get [KIND] [ID]",
+	Args:  cobra.MinimumNArgs(1),
 	Short: "Get all instances for the given kind, or specific instance if an ID is provided.",
 	Long: `Examples:
 
@@ -29,18 +29,32 @@ $ lim get ios <ID>
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		kind := args[0]
+		var id string
+		if len(args) > 1 {
+			id = args[1]
+		}
 		var data [][]string
 		lim := cmd.Context().Value("lim").(limrun.Client)
 		switch kind {
 		case "android":
-			instances, err := lim.AndroidInstances.List(cmd.Context(), limrun.AndroidInstanceListParams{
-				State: limrun.AndroidInstanceListParamsStateReady,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to list android instances: %w", err)
+			var instances []limrun.AndroidInstance
+			if id == "" {
+				fetched, err := lim.AndroidInstances.List(cmd.Context(), limrun.AndroidInstanceListParams{
+					State: limrun.AndroidInstanceListParamsStateReady,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to list android instances: %w", err)
+				}
+				instances = *fetched
+			} else {
+				fetched, err := lim.AndroidInstances.Get(cmd.Context(), id)
+				if err != nil {
+					return fmt.Errorf("failed to list android instances: %w", err)
+				}
+				instances = []limrun.AndroidInstance{*fetched}
 			}
-			data = make([][]string, len(*instances))
-			for i, instance := range *instances {
+			data = make([][]string, len(instances))
+			for i, instance := range instances {
 				data[i] = []string{
 					instance.Metadata.ID,
 					instance.Metadata.DisplayName,
@@ -49,14 +63,24 @@ $ lim get ios <ID>
 				}
 			}
 		case "ios":
-			instances, err := lim.IosInstances.List(cmd.Context(), limrun.IosInstanceListParams{
-				State: limrun.IosInstanceListParamsStateReady,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to list ios instances: %w", err)
+			var instances []limrun.IosInstance
+			if id == "" {
+				fetched, err := lim.IosInstances.List(cmd.Context(), limrun.IosInstanceListParams{
+					State: limrun.IosInstanceListParamsStateReady,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to list ios instances: %w", err)
+				}
+				instances = *fetched
+			} else {
+				fetched, err := lim.IosInstances.Get(cmd.Context(), id)
+				if err != nil {
+					return fmt.Errorf("failed to list ios instances: %w", err)
+				}
+				instances = []limrun.IosInstance{*fetched}
 			}
-			data = make([][]string, len(*instances))
-			for i, instance := range *instances {
+			data = make([][]string, len(instances))
+			for i, instance := range instances {
 				data[i] = []string{
 					instance.Metadata.ID,
 					instance.Metadata.DisplayName,
