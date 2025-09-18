@@ -1,0 +1,105 @@
+name: Build
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
+
+env:
+  GO_VERSION: 1.25.0
+  PLATFORMS: linux/amd64,linux/arm64,darwin/amd64,darwin/arm64,windows/amd64
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+      SHA256_lim_linux_amd64: ${{ steps.build.outputs.SHA256_lim_linux_amd64 }}
+      SHA256_lim_linux_arm64: ${{ steps.build.outputs.SHA256_lim_linux_arm64 }}
+      SHA256_lim_darwin_amd64: ${{ steps.build.outputs.SHA256_lim_darwin_amd64 }}
+      SHA256_lim_darwin_arm64: ${{ steps.build.outputs.SHA256_lim_darwin_arm64 }}
+      SHA256_lim_windows_amd64: ${{ steps.build.outputs.SHA256_lim_windows_amd64 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+      - name: Find the Go Environment
+        id: go
+        run: |
+          echo "cache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+          echo "mod=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
+
+      - name: Cache Go Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.go.outputs.mod }}
+          key: mod-cache-${{ hashFiles('**/go.sum') }}
+          restore-keys: mod-cache-
+      - name: Cache Go Build Cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.go.outputs.cache }}
+          key: build-cache-lim-${{ hashFiles('**/go.sum') }}
+          restore-keys: build-cache-lim-
+      - name: Download Dependencies
+        run: go mod download -x
+
+      - name: Build
+        id: build
+        run: |
+          for platform in $(echo $PLATFORMS | tr "," "\n"); do
+            os=$(echo $platform | cut -d'/' -f1)
+            arch=$(echo $platform | cut -d'/' -f2)
+            echo "Building for $os/$arch"
+            extension=""
+            if [ "$os" = "windows" ]; then
+              extension=".exe"
+              if [ "$arch" = "arm64" ]; then
+                continue
+              fi
+            fi
+            CGO_ENABLED=0 GOOS=${os} GOARCH=${arch} go build -ldflags="-X 'github.com/limrun-inc/lim/version.Version=${{ steps.version.outputs.VERSION }}'" -o .work/bin/lim-${os}-${arch}${extension} main.go &
+          done
+          for platform in $(echo $PLATFORMS | tr "," "\n"); do
+            # Wait for every background job to finish. If any fails, -n will make the wait command fail
+            # but it waits only for the last job so we need to invoke it as many times as there are jobs.
+            wait -n
+          done
+          for platform in $(echo $PLATFORMS | tr "," "\n"); do
+            os=$(echo $platform | cut -d'/' -f1)
+            arch=$(echo $platform | cut -d'/' -f2)
+            SHA256=$(shasum -a 256 .work/bin/lim-${os}-${arch} | cut -d ' ' -f 1)
+            echo "SHA256_lim_${os}_${arch}=${SHA256}"
+            echo "SHA256_lim_${os}_${arch}=${SHA256}" >> "$GITHUB_OUTPUT"
+          done
+      - name: Prepare Windows bundle
+        env:
+          SCRCPY_VERSION: v3.1
+        run: |
+          #!/usr/bin/env bash
+          set -e
+
+          mkdir -p .work/lim-windows-amd64/lim/dependencies
+
+          curl -Lo /tmp/scrcpy.zip https://github.com/Genymobile/scrcpy/releases/download/${SCRCPY_VERSION}/scrcpy-win64-${SCRCPY_VERSION}.zip
+          unzip /tmp/scrcpy.zip -d /tmp/scrcpy
+          mv /tmp/scrcpy/scrcpy-win64-${SCRCPY_VERSION}/* .work/lim-windows-amd64/lim/dependencies/
+          rm -rf /tmp/scrcpy
+
+          mv .work/bin/lim-windows-amd64.exe .work/lim-windows-amd64/lim/dependencies/lim.exe
+          echo -e ".\dependencies\lim.exe run android\r\npause" > .work/lim-windows-amd64/lim/lim-run-android.bat
+          cd .work/lim-windows-amd64
+          zip -r ../../.work/bin/lim-windows-amd64.zip .
+          cd ../..
+      - name: Release
+        uses: softprops/action-gh-release@v2.3.3
+        if: github.ref_type == 'tag'
+        with:
+          generate_release_notes: true
+          files: ./.work/bin/lim-*
