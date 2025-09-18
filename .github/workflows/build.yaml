@@ -147,15 +147,10 @@ jobs:
           sed -i '/# replace_with_darwin_amd64_sha256/ s/sha256 "[^"]*"/sha256 "'${{ needs.build.outputs.SHA256_lim_darwin_amd64 }}'"/' Formula/lim.rb
           sed -i '/# replace_with_linux_arm64_sha256/ s/sha256 "[^"]*"/sha256 "'${{ needs.build.outputs.SHA256_lim_linux_arm64 }}'"/' Formula/lim.rb
           sed -i '/# replace_with_linux_amd64_sha256/ s/sha256 "[^"]*"/sha256 "'${{ needs.build.outputs.SHA256_lim_linux_amd64 }}'"/' Formula/lim.rb
-      - name: Open a pull request
-        uses: peter-evans/create-pull-request@v7
+      - name: Commit to Homebrew Tap
+        uses: actions-js/push@v1.5
         with:
-          token: ${{ steps.generate-token.outputs.token }}
-          sign-commits: 'true'
-          commit-message: |-
-            Update to ${{ needs.build.outputs.version }}
-          title: Update to ${{ needs.build.outputs.version }}
-          body: |-
-            Update to ${{ needs.build.outputs.version }}
-          branch: update-to-${{ needs.build.outputs.version }}
-          base: main
+          github_token: ${{ steps.generate-token.outputs.token }}
+          repository: limrun-inc/homebrew-tap
+          message: |
+            Update to ${{ github.sha }}
