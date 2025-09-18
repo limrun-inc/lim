@@ -27,7 +27,7 @@ func init() {
 // AndroidCmd represents the connect command for Android
 var AndroidCmd = &cobra.Command{
 	Use:   "android [ID]",
-	Short: "Connects to the Android instance",
+	Short: "Connects to the Android instance, e.g. starts a tunnel for ADB to connect to.",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id := args[0]
