@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"syscall"
+	"time"
 
 	limrun "github.com/limrun-inc/go-sdk"
 	"github.com/limrun-inc/go-sdk/tunnel"
@@ -19,15 +20,17 @@ import (
 )
 
 var (
-	adbPath string
-	connect bool
-	stream  bool
+	adbPath      string
+	connect      bool
+	stream       bool
+	deleteOnExit bool
 )
 
 func init() {
 	AndroidCmd.PersistentFlags().StringVar(&adbPath, "adb-path", "adb", "Optional path to the adb binary, defaults to `adb`")
 	AndroidCmd.PersistentFlags().BoolVar(&connect, "connect", true, "Connect to the Android instance, e.g. start ADB tunnel. Default is true.")
 	AndroidCmd.PersistentFlags().BoolVar(&stream, "stream", true, "Stream the Android instance for control. Default is true. Connect flag must be true.")
+	AndroidCmd.PersistentFlags().BoolVar(&deleteOnExit, "rm", false, "Delete the instance on exit. Default is false.")
 }
 
 // AndroidCmd represents the connect command for Android
@@ -36,6 +39,7 @@ var AndroidCmd = &cobra.Command{
 	Short: "Creates a new Android instance, connects and starts streaming.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		lim := cmd.Context().Value("lim").(limrun.Client)
+		st := time.Now()
 		i, err := lim.AndroidInstances.New(cmd.Context(), limrun.AndroidInstanceNewParams{
 			Wait: param.NewOpt(true),
 		})
@@ -49,6 +53,16 @@ var AndroidCmd = &cobra.Command{
 			}
 			return fmt.Errorf("failed to create a new Android instance: %w", err)
 		}
+		if deleteOnExit {
+			defer func() {
+				if err := lim.AndroidInstances.Delete(cmd.Context(), i.Metadata.ID); err != nil {
+					fmt.Printf("Failed to delete instance: %s", err)
+					return
+				}
+				fmt.Printf("%s is deleted\n", i.Metadata.ID)
+			}()
+		}
+		fmt.Printf("Created a new instance in %s\n", time.Since(st))
 		if connect {
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
