@@ -153,4 +153,4 @@ jobs:
           github_token: ${{ steps.generate-token.outputs.token }}
           repository: limrun-inc/homebrew-tap
           message: |
-            Update to ${{ github.sha }}
+            Update to ${{ needs.build.outputs.version }}
