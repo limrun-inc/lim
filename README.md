@@ -7,6 +7,7 @@
 ### Homebrew
 
 ```bash
+# Available for both macOS and Linux.
 brew install limrun-inc/tap/lim
 ```
 
@@ -20,8 +21,16 @@ sudo apt install adb scrcpy
 Install `lim`:
 
 ```bash
-curl -Lo
+VERSION=v0.1.0
+ARCH=amd64
+curl -Lo lim https://github.com/limrun-inc/lim/releases/download/${VERSION}/lim-linux-${ARCH}
+chmod +x lim
+sudo mv lim /usr/local/bin/
 ```
+
+### Windows
+
+Download the ZIP archive from [releases](https://github.com/limrun-inc/lim/releases) and unpack it.
 
 ## Quick Start
 
