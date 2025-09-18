@@ -12,12 +12,15 @@ import (
 	"github.com/limrun-inc/lim/config"
 	"github.com/spf13/viper"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-var apiKeyFlagValue string
+var (
+	apiKeyFlagValue string
+)
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&apiKeyFlagValue, config.ConfigKeyAPIKey, "", "API Key to use to access Limrun")
@@ -53,13 +56,23 @@ to quickly create a Cobra application.`,
 }
 
 func initializeConfig(cmd *cobra.Command) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("could not determine home directory: %w", err)
+	}
+	defaultConfigDir := filepath.Join(home, ".lim")
+	if err := os.MkdirAll(defaultConfigDir, 0700); err != nil {
+		return fmt.Errorf("could not create default config dir: %w", err)
+	}
 	viper.SetEnvPrefix("LIM")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
+	viper.SetDefault(config.ConfigKeyAPIEndpoint, "https://api.limrun.com")
+	viper.SetDefault(config.ConfigKeyConsoleEndpoint, "https://console.limrun.com")
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("$HOME/.lim")
 	viper.AddConfigPath("/etc/lim/")
+	viper.AddConfigPath(defaultConfigDir)
 	viper.AddConfigPath(".")
 	if err := viper.ReadInConfig(); err != nil {
 		// It's okay if the config file doesn't exist.
@@ -67,10 +80,8 @@ func initializeConfig(cmd *cobra.Command) error {
 			return err
 		}
 	}
-	viper.SetDefault(config.ConfigKeyAPIEndpoint, "https://api.limrun.com")
-	viper.SetDefault(config.ConfigKeyConsoleEndpoint, "https://console.limrun.com")
-	if err := viper.SafeWriteConfig(); err != nil && !errors.As(err, &configFileAlreadyExistsError) {
-		return fmt.Errorf("failed to initialize config file: %v", err)
+	if err := viper.SafeWriteConfigAs(filepath.Join(defaultConfigDir, "config.yaml")); err != nil {
+		return fmt.Errorf("failed to write initial config: %v", err)
 	}
 	return viper.BindPFlags(cmd.Flags())
 }
