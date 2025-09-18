@@ -3,10 +3,12 @@ module github.com/limrun-inc/lim
 go 1.25.0
 
 require (
-	github.com/limrun-inc/go-sdk v0.4.0
+	github.com/limrun-inc/go-sdk v0.4.1
 	github.com/olekukonko/tablewriter v1.0.9
+	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0
+	go.jetify.com/typeid/v2 v2.0.0-alpha.3
 )
 
 require (
@@ -19,6 +21,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
 	github.com/olekukonko/errors v1.1.0 // indirect
 	github.com/olekukonko/ll v0.1.1 // indirect
@@ -34,8 +37,8 @@ require (
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	go.jetify.com/typeid/v2 v2.0.0-alpha.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/term v0.35.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 )

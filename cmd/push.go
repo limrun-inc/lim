@@ -5,12 +5,17 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/limrun-inc/lim/config"
-	"github.com/limrun-inc/lim/errors"
+	"os"
+	"path/filepath"
 
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 
 	limrun "github.com/limrun-inc/go-sdk"
+	"github.com/limrun-inc/go-sdk/packages/param"
+
+	"github.com/limrun-inc/lim/config"
+	"github.com/limrun-inc/lim/errors"
 )
 
 var (
@@ -28,11 +33,23 @@ var PushCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		lim := cmd.Context().Value("lim").(limrun.Client)
-		params := limrun.AssetGetOrUploadParams{
-			Path: args[0],
+		f, err := os.Stat(args[0])
+		if err != nil {
+			return err
 		}
+		name := filepath.Base(args[0])
 		if uploadAssetName != "" {
-			params.Name = &uploadAssetName
+			name = uploadAssetName
+		}
+		fmt.Printf("Name: %s\n", name)
+		bar := progressbar.DefaultBytes(
+			f.Size(),
+			"",
+		)
+		params := limrun.AssetGetOrUploadParams{
+			Path:           args[0],
+			ProgressWriter: bar,
+			Name:           param.NewOpt(name),
 		}
 		ass, err := lim.Assets.GetOrUpload(cmd.Context(), params)
 		if err != nil {
@@ -45,7 +62,11 @@ var PushCmd = &cobra.Command{
 			}
 			return err
 		}
-		fmt.Printf("Asset %s with ID of %s is ready", ass.Name, ass.ID)
+		if err := bar.Close(); err != nil {
+			return err
+		}
+		fmt.Printf("ID: %s\n", ass.ID)
+		fmt.Printf("\nDone!\n")
 		return nil
 	},
 }

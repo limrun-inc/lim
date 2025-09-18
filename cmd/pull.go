@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/limrun-inc/lim/config"
 	"github.com/limrun-inc/lim/errors"
+	"github.com/schollz/progressbar/v3"
 	"io"
 	"net/http"
 	"os"
@@ -87,7 +88,7 @@ var PullCmd = &cobra.Command{
 			b, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf("failed to download file: %s", string(b))
 		}
-		fmt.Printf("Pulling file %s to %s\n", ass.Name, fullPath)
+		fmt.Printf("Pulling to %s\n", fullPath)
 		if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 			return fmt.Errorf("failed to create output directory: %w", err)
 		}
@@ -96,11 +97,15 @@ var PullCmd = &cobra.Command{
 			return fmt.Errorf("failed to create file %s: %w", fullPath, err)
 		}
 		defer file.Close()
-		_, err = io.Copy(file, resp.Body)
+		bar := progressbar.DefaultBytes(
+			resp.ContentLength,
+			"",
+		)
+		_, err = io.Copy(io.MultiWriter(file, bar), resp.Body)
 		if err != nil {
 			return fmt.Errorf("failed to write file %s: %w", fullPath, err)
 		}
-		fmt.Printf("Successfully pulled to %s\n", fullPath)
+		fmt.Printf("Done!\n")
 		return nil
 	},
 }
