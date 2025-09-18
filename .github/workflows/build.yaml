@@ -13,6 +13,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
       SHA256_lim_linux_amd64: ${{ steps.build.outputs.SHA256_lim_linux_amd64 }}
