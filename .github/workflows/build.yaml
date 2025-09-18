@@ -153,9 +153,9 @@ jobs:
           token: ${{ steps.generate-token.outputs.token }}
           sign-commits: 'true'
           commit-message: |-
-            Update to ${{ inputs.version }}
-          title: Update to ${{ inputs.version }}
+            Update to ${{ needs.build.outputs.version }}
+          title: Update to ${{ needs.build.outputs.version }}
           body: |-
-            Update to ${{ inputs.version }}
-          branch: update-to-${{ inputs.version }}
+            Update to ${{ needs.build.outputs.version }}
+          branch: update-to-${{ needs.build.outputs.version }}
           base: main
