@@ -25,7 +25,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+      - name: Fetch history for all tags
+        run: git fetch --prune --unshallow
+      - name: Calculate version
+        id: version
+        run: |
+          VERSION="v0.0.0"
+          if [ -z "$(git tag)" ]; then
+            echo "No tags found"
+            VERSION="$(echo "v0.0.0-$(git rev-list HEAD --count)-$(git describe --dirty --always)" | sed 's/-/./2' | sed 's/-/./2' | sed 's/-/./2')"
+          else
+            echo "Tags found:\n$(git tag)"
+            VERSION="$(git describe --dirty --always --tags --match 'v*' | sed 's|.*/||' | sed 's/-/./2' | sed 's/-/./2' | sed 's/-/./2')"
+          fi
+          echo "Version is ${VERSION}"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
