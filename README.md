@@ -39,9 +39,3 @@ Run the following to get an Android sandbox created and streaming!
 ```bash
 lim run android
 ```
-
-For iOS, run the following:
-```bash
-lim run ios
-```
-
