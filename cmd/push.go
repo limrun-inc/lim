@@ -15,19 +15,16 @@ import (
 
 var (
 	uploadAssetName string
-	override        bool
 )
 
 func init() {
-	UploadAssetCmd.PersistentFlags().StringVarP(&uploadAssetName, "name", "n", "", "Name of the asset")
-	UploadAssetCmd.PersistentFlags().BoolVarP(&override, "override", "", false, "Override if there is already an asset")
-	UploadCmd.AddCommand(UploadAssetCmd)
-	RootCmd.AddCommand(UploadCmd)
+	PushCmd.PersistentFlags().StringVarP(&uploadAssetName, "name", "n", "", "Name of the asset. Defaults to file name.")
+	RootCmd.AddCommand(PushCmd)
 }
 
-// UploadAssetCmd represents the upload asset command
-var UploadAssetCmd = &cobra.Command{
-	Use:  "asset [file path]",
+// PushCmd represents the upload asset command
+var PushCmd = &cobra.Command{
+	Use:  "push [file path]",
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		lim := cmd.Context().Value("lim").(limrun.Client)
@@ -51,9 +48,4 @@ var UploadAssetCmd = &cobra.Command{
 		fmt.Printf("Asset %s with ID of %s is ready", ass.Name, ass.ID)
 		return nil
 	},
-}
-
-var UploadCmd = &cobra.Command{
-	Use: "upload",
-	Run: func(cmd *cobra.Command, args []string) {},
 }

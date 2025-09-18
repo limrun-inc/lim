@@ -15,25 +15,31 @@ import (
 	limrun "github.com/limrun-inc/go-sdk"
 	"github.com/limrun-inc/go-sdk/packages/param"
 	"github.com/spf13/cobra"
+	"go.jetify.com/typeid/v2"
 )
 
 var (
 	downloadAssetName string
+	outDir            string
 )
 
 func init() {
-	DownloadAssetCmd.PersistentFlags().StringVarP(&downloadAssetName, "name", "n", "", "Name of the asset")
-	DownloadCmd.AddCommand(DownloadAssetCmd)
-	RootCmd.AddCommand(DownloadCmd)
+	PullCmd.PersistentFlags().StringVarP(&downloadAssetName, "name", "n", "", "Name of the asset.")
+	PullCmd.PersistentFlags().StringVarP(&outDir, "output", "o", ".", "Output directory. Defaults to current directory.")
+	RootCmd.AddCommand(PullCmd)
 }
 
-// DownloadAssetCmd represents the download asset command
-var DownloadAssetCmd = &cobra.Command{
-	Use: "asset [ID]",
+// PullCmd represents the push command
+var PullCmd = &cobra.Command{
+	Use:  "pull [ID or Name]",
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		lim := cmd.Context().Value("lim").(limrun.Client)
 		var id string
-		if len(args) > 0 {
+		_, err := typeid.Parse(args[0])
+		if err != nil {
+			downloadAssetName = args[0]
+		} else {
 			id = args[0]
 		}
 		var ass limrun.Asset
@@ -68,7 +74,10 @@ var DownloadAssetCmd = &cobra.Command{
 		default:
 			return fmt.Errorf("no asset id or name specified")
 		}
-		fileName := filepath.Base(ass.Name)
+		fullPath, err := filepath.Abs(filepath.Join(outDir, ass.Name))
+		if err != nil {
+			return fmt.Errorf("failed to get absolute path: %w", err)
+		}
 		resp, err := http.Get(ass.SignedDownloadURL)
 		if err != nil {
 			return fmt.Errorf("failed to download file: %w", err)
@@ -78,22 +87,20 @@ var DownloadAssetCmd = &cobra.Command{
 			b, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf("failed to download file: %s", string(b))
 		}
-		fmt.Printf("Downloading file %s\n", fileName)
-		file, err := os.Create(fileName)
+		fmt.Printf("Pulling file %s to %s\n", ass.Name, fullPath)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+			return fmt.Errorf("failed to create output directory: %w", err)
+		}
+		file, err := os.Create(fullPath)
 		if err != nil {
-			return fmt.Errorf("failed to create file %s: %w", fileName, err)
+			return fmt.Errorf("failed to create file %s: %w", fullPath, err)
 		}
 		defer file.Close()
 		_, err = io.Copy(file, resp.Body)
 		if err != nil {
-			return fmt.Errorf("failed to write file %s: %w", fileName, err)
+			return fmt.Errorf("failed to write file %s: %w", fullPath, err)
 		}
-		fmt.Printf("Successfully downloaded %s\n", fileName)
+		fmt.Printf("Successfully pulled to %s\n", fullPath)
 		return nil
 	},
-}
-
-var DownloadCmd = &cobra.Command{
-	Use: "download",
-	Run: func(cmd *cobra.Command, args []string) {},
 }
