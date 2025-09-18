@@ -128,10 +128,6 @@ jobs:
     needs:
       - build
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          repository: 'limrun-inc/homebrew-tap'
       - uses: actions/create-github-app-token@v2
         id: generate-token
         with:
@@ -139,6 +135,11 @@ jobs:
           private-key: ${{ secrets.LIMRUNBOTAPP_APP_PRIVATE_KEY }}
           owner: limrun-inc
           repositories: homebrew-tap
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: 'limrun-inc/homebrew-tap'
+          token: ${{ steps.generate-token.outputs.token }}
       - name: Update version in formula
         run: |
           sed -i 's/version ".*"/version "${{ needs.build.outputs.version }}"/g' Formula/lim.rb
