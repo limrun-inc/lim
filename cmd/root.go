@@ -80,7 +80,7 @@ func initializeConfig(cmd *cobra.Command) error {
 			return err
 		}
 	}
-	if err := viper.SafeWriteConfigAs(filepath.Join(defaultConfigDir, "config.yaml")); err != nil {
+	if err := viper.SafeWriteConfigAs(filepath.Join(defaultConfigDir, "config.yaml")); err != nil && !errors.As(err, &configFileAlreadyExistsError) {
 		return fmt.Errorf("failed to write initial config: %v", err)
 	}
 	return viper.BindPFlags(cmd.Flags())
