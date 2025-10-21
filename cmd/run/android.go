@@ -21,9 +21,11 @@ import (
 	"github.com/limrun-inc/go-sdk/packages/param"
 	"github.com/limrun-inc/lim/config"
 	"github.com/limrun-inc/lim/errors"
+	"github.com/schollz/progressbar/v3"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -37,6 +39,9 @@ var (
 	connect      bool
 	stream       bool
 	deleteOnExit bool
+
+	assetNamesToInstall []string
+	localAppsToInstall  []string
 )
 
 func init() {
@@ -44,6 +49,8 @@ func init() {
 	AndroidCmd.PersistentFlags().BoolVar(&connect, "connect", true, "Connect to the Android instance, e.g. start ADB tunnel. Default is true.")
 	AndroidCmd.PersistentFlags().BoolVar(&stream, "stream", true, "Stream the Android instance for control. Default is true. Connect flag must be true.")
 	AndroidCmd.PersistentFlags().BoolVar(&deleteOnExit, "rm", false, "Delete the instance on exit. Default is false.")
+	AndroidCmd.PersistentFlags().StringArrayVar(&assetNamesToInstall, "install-asset", []string{}, "List of asset names to install. It will return error if they are not already uploaded.")
+	AndroidCmd.PersistentFlags().StringArrayVar(&localAppsToInstall, "install", []string{}, "List of local app files to install. If not uploaded already, they will be uploaded to the asset storage first.")
 }
 
 // AndroidCmd represents the connect command for Android
@@ -52,10 +59,46 @@ var AndroidCmd = &cobra.Command{
 	Short: "Creates a new Android instance, connects and starts streaming.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		lim := cmd.Context().Value("lim").(limrun.Client)
+		if len(localAppsToInstall) > 0 {
+			for _, appPath := range localAppsToInstall {
+				f, err := os.Stat(appPath)
+				if err != nil {
+					return err
+				}
+				fmt.Printf("%s\n", filepath.Base(appPath))
+				bar := progressbar.DefaultBytes(
+					f.Size(),
+					"",
+				)
+				ass, err := lim.Assets.GetOrUpload(cmd.Context(), limrun.AssetGetOrUploadParams{
+					Path:           appPath,
+					ProgressWriter: bar,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to upload app at %s: %w", appPath, err)
+				}
+				if err := bar.Close(); err != nil {
+					return err
+				}
+				assetNamesToInstall = append(assetNamesToInstall, ass.Name)
+			}
+			fmt.Printf("Successfully uploaded %d file(s)\n", len(localAppsToInstall))
+		}
 		st := time.Now()
-		i, err := lim.AndroidInstances.New(cmd.Context(), limrun.AndroidInstanceNewParams{
+		params := limrun.AndroidInstanceNewParams{
 			Wait: param.NewOpt(true),
-		})
+			Spec: limrun.AndroidInstanceNewParamsSpec{},
+		}
+		if len(assetNamesToInstall) > 0 {
+			for _, assetName := range assetNamesToInstall {
+				params.Spec.InitialAssets = append(params.Spec.InitialAssets, limrun.AndroidInstanceNewParamsSpecInitialAsset{
+					Kind:      "App",
+					Source:    "AssetName",
+					AssetName: param.NewOpt(assetName),
+				})
+			}
+		}
+		i, err := lim.AndroidInstances.New(cmd.Context(), params)
 		if err != nil {
 			if errors.IsUnauthenticated(err) {
 				if err := config.Login(cmd.Context()); err != nil {
