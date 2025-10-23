@@ -20,15 +20,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	limrun "github.com/limrun-inc/go-sdk"
-	"github.com/limrun-inc/go-sdk/option"
-	"github.com/limrun-inc/lim/config"
-	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	limrun "github.com/limrun-inc/go-sdk"
+	"github.com/limrun-inc/go-sdk/option"
+	"github.com/limrun-inc/lim/config"
 )
 
 var (
@@ -53,9 +54,9 @@ var RootCmd = &cobra.Command{
 		if err := initializeConfig(cmd); err != nil {
 			return err
 		}
-		apiKey := viper.GetString(config.ConfigKeyAPIKey)
 		opts := []option.RequestOption{
-			option.WithAPIKey(apiKey),
+			option.WithAPIKey(viper.GetString(config.ConfigKeyAPIKey)),
+			option.WithBaseURL(viper.GetString(config.ConfigKeyAPIEndpoint)),
 		}
 		lim := limrun.NewClient(opts...)
 		cmd.SetContext(context.WithValue(cmd.Context(), "lim", lim))
