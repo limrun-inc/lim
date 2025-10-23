@@ -3,7 +3,7 @@ module github.com/limrun-inc/lim
 go 1.25.0
 
 require (
-	github.com/limrun-inc/go-sdk v0.4.1
+	github.com/limrun-inc/go-sdk v0.4.2
 	github.com/olekukonko/tablewriter v1.0.9
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/spf13/cobra v1.10.1

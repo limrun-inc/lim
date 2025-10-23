@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -49,8 +50,8 @@ func init() {
 	AndroidCmd.PersistentFlags().BoolVar(&connect, "connect", true, "Connect to the Android instance, e.g. start ADB tunnel. Default is true.")
 	AndroidCmd.PersistentFlags().BoolVar(&stream, "stream", true, "Stream the Android instance for control. Default is true. Connect flag must be true.")
 	AndroidCmd.PersistentFlags().BoolVar(&deleteOnExit, "rm", false, "Delete the instance on exit. Default is false.")
-	AndroidCmd.PersistentFlags().StringArrayVar(&assetNamesToInstall, "install-asset", []string{}, "List of asset names to install. It will return error if they are not already uploaded.")
-	AndroidCmd.PersistentFlags().StringArrayVar(&localAppsToInstall, "install", []string{}, "List of local app files to install. If not uploaded already, they will be uploaded to the asset storage first.")
+	AndroidCmd.PersistentFlags().StringArrayVar(&assetNamesToInstall, "install-asset", []string{}, "List of asset names to install. It will return error if they are not already uploaded. Asset names that will be installed together should be separated by comma.")
+	AndroidCmd.PersistentFlags().StringArrayVar(&localAppsToInstall, "install", []string{}, "List of local app files to install. If not uploaded already, they will be uploaded to the asset storage first. Files that will be installed together should be separated by comma.")
 }
 
 // AndroidCmd represents the connect command for Android
@@ -59,28 +60,49 @@ var AndroidCmd = &cobra.Command{
 	Short: "Creates a new Android instance, connects and starts streaming.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		lim := cmd.Context().Value("lim").(limrun.Client)
+		var finalAssetNamesToInstall [][]string
+		if len(assetNamesToInstall) > 0 {
+			for _, assetName := range assetNamesToInstall {
+				var arr []string
+				for _, n := range strings.Split(assetName, ",") {
+					if n == "" {
+						continue
+					}
+					arr = append(arr, n)
+				}
+				finalAssetNamesToInstall = append(finalAssetNamesToInstall, arr)
+			}
+		}
 		if len(localAppsToInstall) > 0 {
-			for _, appPath := range localAppsToInstall {
-				f, err := os.Stat(appPath)
-				if err != nil {
-					return err
+			for _, appPaths := range localAppsToInstall {
+				var assetNamesForSingleApp []string
+				for _, singleApkPath := range strings.Split(appPaths, ",") {
+					if singleApkPath == "" {
+						continue
+					}
+					f, err := os.Stat(singleApkPath)
+					if err != nil {
+						return err
+					}
+					fmt.Printf("%s\n", filepath.Base(singleApkPath))
+					bar := progressbar.DefaultBytes(
+						f.Size(),
+						"",
+					)
+					ass, err := lim.Assets.GetOrUpload(cmd.Context(), limrun.AssetGetOrUploadParams{
+						Name:           param.NewOpt(filepath.Base(singleApkPath)),
+						Path:           singleApkPath,
+						ProgressWriter: bar,
+					})
+					if err != nil {
+						return fmt.Errorf("failed to upload app at %s: %w", singleApkPath, err)
+					}
+					if err := bar.Close(); err != nil {
+						return err
+					}
+					assetNamesForSingleApp = append(assetNamesForSingleApp, ass.Name)
 				}
-				fmt.Printf("%s\n", filepath.Base(appPath))
-				bar := progressbar.DefaultBytes(
-					f.Size(),
-					"",
-				)
-				ass, err := lim.Assets.GetOrUpload(cmd.Context(), limrun.AssetGetOrUploadParams{
-					Path:           appPath,
-					ProgressWriter: bar,
-				})
-				if err != nil {
-					return fmt.Errorf("failed to upload app at %s: %w", appPath, err)
-				}
-				if err := bar.Close(); err != nil {
-					return err
-				}
-				assetNamesToInstall = append(assetNamesToInstall, ass.Name)
+				finalAssetNamesToInstall = append(finalAssetNamesToInstall, assetNamesForSingleApp)
 			}
 			fmt.Printf("Successfully uploaded %d file(s)\n", len(localAppsToInstall))
 		}
@@ -89,12 +111,12 @@ var AndroidCmd = &cobra.Command{
 			Wait: param.NewOpt(true),
 			Spec: limrun.AndroidInstanceNewParamsSpec{},
 		}
-		if len(assetNamesToInstall) > 0 {
-			for _, assetName := range assetNamesToInstall {
+		if len(finalAssetNamesToInstall) > 0 {
+			for _, assetNames := range finalAssetNamesToInstall {
 				params.Spec.InitialAssets = append(params.Spec.InitialAssets, limrun.AndroidInstanceNewParamsSpecInitialAsset{
-					Kind:      "App",
-					Source:    "AssetName",
-					AssetName: param.NewOpt(assetName),
+					Kind:       "App",
+					Source:     "AssetNames",
+					AssetNames: assetNames,
 				})
 			}
 		}
