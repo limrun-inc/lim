@@ -32,19 +32,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	port string
-)
-
-func init() {
-	IosCmd.PersistentFlags().StringVar(&port, "port", "", "Port pair to forward. The format is <host port>:<simulator port>, e.g. 8282:8100 will make the 8100 of simulator available as 8282 in your host. If host port is empty like :8100, it will find an available port and print the final local URL.")
-}
-
 // IosCmd represents the connect command for Ios
 var IosCmd = &cobra.Command{
-	Use:   "ios [ID] [port pair]",
-	Short: "Connects given ports of the remote simulator.",
-	Args:  cobra.ExactArgs(2),
+	Use:     "ios [ID] [port pair]",
+	Short:   "Connects given ports of the remote simulator.",
+	Example: `lim connect ios ios_uswa_odsahdhnasdh 1234:5678`,
+	Args:    cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id := args[0]
 		ports := strings.Split(args[1], ":")
@@ -80,7 +73,7 @@ var IosCmd = &cobra.Command{
 			}
 			opts = append(opts, tunnel.MultiplexedWithLocalPort(localPortInt))
 		}
-		t, err := tunnel.NewMultiplexed(u, remotePort, i.Status.Token)
+		t, err := tunnel.NewMultiplexed(u, remotePort, i.Status.Token, opts...)
 		if err != nil {
 			return fmt.Errorf("failed to create tunnel: %w", err)
 		}

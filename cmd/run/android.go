@@ -144,7 +144,7 @@ var AndroidCmd = &cobra.Command{
 		if connect {
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-			t, err := tunnel.New(i.Status.AdbWebSocketURL, i.Status.Token, tunnel.WithADBPath(adbPath))
+			t, err := tunnel.NewADB(i.Status.AdbWebSocketURL, i.Status.Token, tunnel.WithADBPath(adbPath))
 			if err != nil {
 				return fmt.Errorf("failed to create tunnel: %w", err)
 			}

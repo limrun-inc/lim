@@ -29,5 +29,6 @@ var ConnectCmd = &cobra.Command{
 
 func init() {
 	ConnectCmd.AddCommand(connect.AndroidCmd)
+	ConnectCmd.AddCommand(connect.IosCmd)
 	RootCmd.AddCommand(ConnectCmd)
 }
