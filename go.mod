@@ -3,7 +3,8 @@ module github.com/limrun-inc/lim
 go 1.25.0
 
 require (
-	github.com/limrun-inc/go-sdk v0.4.2
+	github.com/gorilla/websocket v1.5.3
+	github.com/limrun-inc/go-sdk v0.5.2-0.20251103171529-1d7af75a6524
 	github.com/olekukonko/tablewriter v1.0.9
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/spf13/cobra v1.10.1
@@ -16,7 +17,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gofrs/uuid/v5 v5.3.2 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

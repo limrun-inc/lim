@@ -18,15 +18,16 @@ package connect
 
 import (
 	"fmt"
-	"github.com/limrun-inc/lim/config"
-	"github.com/limrun-inc/lim/errors"
 	"os"
 	"os/signal"
 	"syscall"
+	
+	"github.com/spf13/cobra"
 
 	limrun "github.com/limrun-inc/go-sdk"
 	"github.com/limrun-inc/go-sdk/tunnel"
-	"github.com/spf13/cobra"
+	"github.com/limrun-inc/lim/config"
+	"github.com/limrun-inc/lim/errors"
 )
 
 var (
@@ -56,7 +57,7 @@ var AndroidCmd = &cobra.Command{
 			}
 			return fmt.Errorf("failed to get Android instance %s: %w", id, err)
 		}
-		t, err := tunnel.New(i.Status.AdbWebSocketURL, i.Status.Token, tunnel.WithADBPath(adbPath))
+		t, err := tunnel.NewADB(i.Status.AdbWebSocketURL, i.Status.Token, tunnel.WithADBPath(adbPath))
 		if err != nil {
 			return fmt.Errorf("failed to create tunnel: %w", err)
 		}
@@ -66,8 +67,9 @@ var AndroidCmd = &cobra.Command{
 		defer t.Close()
 
 		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+		fmt.Printf("Listening for connections on %s\n", t.Addr())
 		fmt.Println("Tunnel started. Press Ctrl+C to stop.")
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 		select {
 		case sig := <-sigChan:
 			fmt.Printf("Received signal %v, stopping tunnel...\n", sig)
