@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -17,12 +16,8 @@ import (
 	"go.jetify.com/typeid/v2"
 
 	limrun "github.com/limrun-inc/go-sdk"
-)
 
-const (
-	ConfigKeySimctlInstanceID = "simctl-instance-id"
-
-	defaultCommandTimeout = 120 * time.Second
+	"github.com/limrun-inc/lim/config"
 )
 
 func init() {
@@ -55,7 +50,7 @@ var SimctlCmd = &cobra.Command{
 			if len(args) < 2 {
 				return errors.New("set-instance-id <simctl-instance-id>")
 			}
-			viper.Set(ConfigKeySimctlInstanceID, args[1])
+			viper.Set(config.ConfigKeySimctlInstanceID, args[1])
 			home, err := os.UserHomeDir()
 			if err != nil {
 				return fmt.Errorf("could not determine home directory: %w", err)
@@ -67,11 +62,11 @@ var SimctlCmd = &cobra.Command{
 			cmd.Printf("Set instance ID to %s\n", args[1])
 			return nil
 		case "get-instance-id":
-			cmd.Printf(viper.GetString(ConfigKeySimctlInstanceID))
+			cmd.Printf(viper.GetString(config.ConfigKeySimctlInstanceID))
 			return nil
 		default:
 		}
-		id := viper.GetString(ConfigKeySimctlInstanceID)
+		id := viper.GetString(config.ConfigKeySimctlInstanceID)
 		if id == "" {
 			return errors.New("no instance id found: either run `lim simctl set-instance-id` or set LIM_SIMCTL_INSTANCE_ID environment variable")
 		}
@@ -80,15 +75,9 @@ var SimctlCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to get IOS instance %s: %s", id, err)
 		}
-		u, err := url.Parse(i.Status.EndpointWebSocketURL)
-		if err != nil {
-			return fmt.Errorf("failed to parse URL %s: %s", i.Status.EndpointWebSocketURL, err)
-		}
-		q := u.Query()
-		q.Set("token", i.Status.Token)
-		u.RawQuery = q.Encode()
-		us := "ws://10.244.1.2:8833/signaling"
-		ws, _, err := websocket.DefaultDialer.Dial(us, http.Header{})
+		ws, _, err := websocket.DefaultDialer.Dial(i.Status.EndpointWebSocketURL, http.Header{
+			"Authorization": []string{"Bearer " + i.Status.Token},
+		})
 		if err != nil {
 			return fmt.Errorf("failed to connect to IOS instance %s: %s", id, err)
 		}
@@ -120,8 +109,8 @@ var SimctlCmd = &cobra.Command{
 		}); err != nil {
 			return fmt.Errorf("failed to send simctl message: %w", err)
 		}
-		msg := &SimctlResult{}
 		for {
+			msg := &SimctlResult{}
 			if err := ws.ReadJSON(msg); err != nil {
 				return fmt.Errorf("failed to read response from simctl: %w", err)
 			}

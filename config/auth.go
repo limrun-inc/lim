@@ -32,6 +32,8 @@ const (
 	ConfigKeyAPIKey          = "api-key"
 	ConfigKeyAPIEndpoint     = "api-endpoint"
 	ConfigKeyConsoleEndpoint = "console-endpoint"
+
+	ConfigKeySimctlInstanceID = "simctl-instance-id"
 )
 
 func Login(ctx context.Context) error {

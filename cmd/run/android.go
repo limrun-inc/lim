@@ -95,6 +95,13 @@ var AndroidCmd = &cobra.Command{
 						ProgressWriter: bar,
 					})
 					if err != nil {
+						if errors.IsUnauthenticated(err) {
+							if err := config.Login(cmd.Context()); err != nil {
+								return err
+							}
+							fmt.Println("You are logged in now")
+							return nil
+						}
 						return fmt.Errorf("failed to upload app at %s: %w", singleApkPath, err)
 					}
 					if err := bar.Close(); err != nil {

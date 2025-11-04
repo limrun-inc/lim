@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/gorilla/websocket v1.5.3
-	github.com/limrun-inc/go-sdk v0.5.2-0.20251103171529-1d7af75a6524
+	github.com/limrun-inc/go-sdk v0.5.2-0.20251104105059-21bad71a0aef
 	github.com/olekukonko/tablewriter v1.0.9
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/spf13/cobra v1.10.1

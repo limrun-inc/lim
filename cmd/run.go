@@ -29,5 +29,6 @@ var RunCmd = &cobra.Command{
 
 func init() {
 	RunCmd.AddCommand(run.AndroidCmd)
+	RunCmd.AddCommand(run.IosCmd)
 	RootCmd.AddCommand(RunCmd)
 }
