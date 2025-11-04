@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -18,15 +20,13 @@ import (
 )
 
 const (
-	ConfigKeySimctlInstanceID     = "simctl-instance-id"
-	ConfigKeySimctlCommandTimeout = "simctl-command-timeout-seconds"
+	ConfigKeySimctlInstanceID = "simctl-instance-id"
 
 	defaultCommandTimeout = 120 * time.Second
 )
 
 func init() {
 	RootCmd.AddCommand(SimctlCmd)
-	viper.SetDefault(ConfigKeySimctlCommandTimeout, defaultCommandTimeout)
 }
 
 type SimctlMessage struct {
@@ -35,12 +35,12 @@ type SimctlMessage struct {
 	Args []string `json:"args"`
 }
 
-type SimctlResultMessage struct {
+type SimctlResult struct {
 	Type     string `json:"type"`
 	ID       string `json:"id"`
-	ExitCode int32  `json:"exitCode"`
-	Stdout   string `json:"stdout"`
-	Stderr   string `json:"stderr"`
+	ExitCode *int32 `json:"exitCode,omitempty"`
+	Stdout   []byte `json:"stdout,omitempty"`
+	Stderr   []byte `json:"stderr,omitempty"`
 }
 
 // SimctlCmd is a special command that sends "xcrun simctl" commands to the connected remote iOS simulator.
@@ -87,30 +87,62 @@ var SimctlCmd = &cobra.Command{
 		q := u.Query()
 		q.Set("token", i.Status.Token)
 		u.RawQuery = q.Encode()
-		// wss://us-west1-m10-bed6.limrun.net/v1/organizations/org_01k3v8mb72fys89pq5jdyp8zgk/ios.limrun.com/v1/instances/ios_uswa_01k95hzj0ff45txm9k10ax7624/endpointWebSocket?token=lim_8f46b6cb33ae8380d1af417d33722cbe8a01b09cfa9c947e
-		us := u.String()
+		us := "ws://10.244.1.2:8833/signaling"
 		ws, _, err := websocket.DefaultDialer.Dial(us, http.Header{})
 		if err != nil {
 			return fmt.Errorf("failed to connect to IOS instance %s: %s", id, err)
 		}
-		defer ws.Close()
+		defer func() {
+			_ = ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseGoingAway, "client terminated"), time.Now().Add(1*time.Second))
+			_ = ws.Close()
+		}()
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+		go func() {
+			sig := <-sigCh
+			code := 1
+			switch sig {
+			case syscall.SIGTERM:
+				code = 128 + 15
+			case syscall.SIGINT:
+				code = 128 + 2
+			}
+			_ = ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseGoingAway, "client terminated"), time.Now().Add(1*time.Second))
+			_ = ws.Close()
+			os.Exit(code)
+		}()
+		// Generate a request id and send the simctl request
+		reqID := typeid.MustGenerate("simctl").String()
 		if err := ws.WriteJSON(SimctlMessage{
 			Type: "simctl",
-			ID:   typeid.MustGenerate("simctl").String(),
+			ID:   reqID,
 			Args: args,
 		}); err != nil {
 			return fmt.Errorf("failed to send simctl message: %w", err)
 		}
-		resp := &SimctlResultMessage{}
-		_ = ws.SetReadDeadline(time.Now().Add(viper.GetDuration(ConfigKeySimctlCommandTimeout)))
-		if err := ws.ReadJSON(resp); err != nil {
-			return fmt.Errorf("failed to read response from simctl: %w", err)
-		}
-		fmt.Fprintf(os.Stdout, "%s", resp.Stdout)
-		fmt.Fprintf(os.Stderr, "%s", resp.Stderr)
-		if resp.ExitCode != 0 {
-			ws.Close()
-			os.Exit(int(resp.ExitCode))
+		msg := &SimctlResult{}
+		for {
+			if err := ws.ReadJSON(msg); err != nil {
+				return fmt.Errorf("failed to read response from simctl: %w", err)
+			}
+			if msg.Type != "simctlResult" || msg.ID != reqID {
+				// Ignore unrelated messages
+				continue
+			}
+			if len(msg.Stdout) > 0 {
+				_, _ = os.Stdout.Write(msg.Stdout)
+			}
+			if len(msg.Stderr) > 0 {
+				_, _ = os.Stderr.Write(msg.Stderr)
+			}
+			if msg.ExitCode != nil {
+				if *msg.ExitCode != 0 {
+					_ = ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseGoingAway, "client terminated"), time.Now().Add(1*time.Second))
+					_ = ws.Close()
+					os.Exit(int(*msg.ExitCode))
+				}
+				break
+			}
 		}
 		return nil
 	},
