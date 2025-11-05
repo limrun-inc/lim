@@ -18,9 +18,10 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/limrun-inc/lim/cmd/deleteCmd"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 // DeleteCmd represents the delete command
@@ -43,5 +44,6 @@ var DeleteCmd = &cobra.Command{
 func init() {
 	DeleteCmd.AddCommand(deleteCmd.AndroidCmd)
 	DeleteCmd.AddCommand(deleteCmd.IOSCmd)
+	DeleteCmd.AddCommand(deleteCmd.AssetCmd)
 	RootCmd.AddCommand(DeleteCmd)
 }
