@@ -18,6 +18,7 @@ package get
 
 import (
 	"fmt"
+
 	"github.com/limrun-inc/go-sdk"
 	"github.com/limrun-inc/lim/config"
 	"github.com/limrun-inc/lim/errors"
@@ -49,7 +50,7 @@ $ lim get ios <ID>
 		table.Header([]string{"ID", "Name", "Region", "State"})
 		var instances []limrun.IosInstance
 		if id == "" {
-			fetched, err := lim.IosInstances.List(cmd.Context(), limrun.IosInstanceListParams{
+			readyOnes, err := lim.IosInstances.List(cmd.Context(), limrun.IosInstanceListParams{
 				State: limrun.IosInstanceListParamsStateReady,
 			})
 			if err != nil {
@@ -62,7 +63,10 @@ $ lim get ios <ID>
 				}
 				return fmt.Errorf("failed to list ios instances: %w", err)
 			}
-			instances = *fetched
+			assignedOnes, err := lim.IosInstances.List(cmd.Context(), limrun.IosInstanceListParams{
+				State: limrun.IosInstanceListParamsStateAssigned,
+			})
+			instances = append(*readyOnes, *assignedOnes...)
 		} else {
 			fetched, err := lim.IosInstances.Get(cmd.Context(), id)
 			if err != nil {
