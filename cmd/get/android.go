@@ -18,6 +18,7 @@ package get
 
 import (
 	"fmt"
+
 	"github.com/limrun-inc/lim/config"
 	"github.com/limrun-inc/lim/errors"
 
@@ -50,7 +51,7 @@ $ lim get android <ID>
 		table.Header([]string{"ID", "Name", "Region", "State"})
 		var instances []limrun.AndroidInstance
 		if id == "" {
-			fetched, err := lim.AndroidInstances.List(cmd.Context(), limrun.AndroidInstanceListParams{
+			readyOnes, err := lim.AndroidInstances.List(cmd.Context(), limrun.AndroidInstanceListParams{
 				State: limrun.AndroidInstanceListParamsStateReady,
 			})
 			if err != nil {
@@ -61,9 +62,15 @@ $ lim get android <ID>
 					fmt.Println("You are logged in now")
 					return nil
 				}
-				return fmt.Errorf("failed to list android instances: %w", err)
+				return fmt.Errorf("failed to list ready android instances: %w", err)
 			}
-			instances = *fetched
+			assignedOnes, err := lim.AndroidInstances.List(cmd.Context(), limrun.AndroidInstanceListParams{
+				State: limrun.AndroidInstanceListParamsStateAssigned,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to list assigned android instances: %w", err)
+			}
+			instances = append(*readyOnes, *assignedOnes...)
 		} else {
 			fetched, err := lim.AndroidInstances.Get(cmd.Context(), id)
 			if err != nil {

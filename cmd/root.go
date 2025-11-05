@@ -57,6 +57,7 @@ var RootCmd = &cobra.Command{
 		opts := []option.RequestOption{
 			option.WithAPIKey(viper.GetString(config.ConfigKeyAPIKey)),
 			option.WithBaseURL(viper.GetString(config.ConfigKeyAPIEndpoint)),
+			option.WithMaxRetries(1),
 		}
 		lim := limrun.NewClient(opts...)
 		cmd.SetContext(context.WithValue(cmd.Context(), "lim", lim))
